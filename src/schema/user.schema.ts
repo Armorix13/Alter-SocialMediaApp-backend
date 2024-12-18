@@ -10,9 +10,14 @@ export const socailLoginSchema = {
         fullName: Joi.string().optional().messages({
             "string.base": "Full name must be a string"
         }),
+        profileImage: Joi.string().optional().messages({
+            "string.base": "Full name must be a string"
+        }),
+        isEmailVerified: Joi.boolean().optional().messages({
+            "boolean.base": "isEmailVerified must be a boolean"
+        }),
         socialId: Joi.string().required(),
         socialType: Joi.number().optional(),
-
     })
 };
 export const loginSchema = {
@@ -97,7 +102,7 @@ export const updateUserDataSchema = {
         boi: Joi.string().optional().messages({
             "string.base": "boi must be a string",
         }),
-      
+
         fullName: Joi.string().optional().messages({
             "string.base": "Full name must be a string"
         }),
