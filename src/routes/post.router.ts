@@ -9,8 +9,9 @@ const postRouter = express.Router();
 
 postRouter.post('/create', authMiddleware, upload.array('images', 5), validate(CreatePostSchema), createPost);
 postRouter.get('/get', authMiddleware, getAllPost);
-postRouter.get('/mypost', authMiddleware, getMyPosts);
 postRouter.get('/get/:id', authMiddleware, getAllPost);
+postRouter.get('/mypost', authMiddleware, getMyPosts);
+postRouter.get('/mypost/:id', authMiddleware, getMyPosts);
 postRouter.put('/update/:id', authMiddleware, upload.array('images', 5), validate(updatePostSchema), editPost);
 postRouter.delete('/delete/:id', authMiddleware, validate(deletePostSchema), deletePost);
 postRouter.put('/likDislike/:id', authMiddleware, validate(deletePostSchema), likeDisLikePost);
