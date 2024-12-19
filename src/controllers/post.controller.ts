@@ -1,16 +1,16 @@
 import { NextFunction, Request, Response } from "express";
-import mongoose, { ObjectId ,FilterQuery } from "mongoose";
+import mongoose, { ObjectId, FilterQuery } from "mongoose";
 import { ERROR, SUCCESS } from "../utils/response";
 import { Ieditpost, Ipost } from "../types/Request Body/post/types";
 import PostModel from "../models/post.model";
 import { IeditPostParamsType } from "../types/Request Params/post/types";
 
-export const createPost = async (req: Request<{},{},Ipost>, res: Response, next: NextFunction): Promise<any> => {
+export const createPost = async (req: Request<{}, {}, Ipost>, res: Response, next: NextFunction): Promise<any> => {
     try {
-        let { desc} = req.body;
+        let { desc } = req.body;
         console.log("req.body", req.body)
-        const post = await PostModel.create({desc,userId:req.userId });
-    
+        const post = await PostModel.create({ desc, userId: req.userId });
+
         console.log("req.file", req.file)
         if (req.files && Array.isArray(req.files)) {
             post.images = req.files.map((file) => `/uploads/${file.filename}`);
@@ -24,26 +24,27 @@ export const createPost = async (req: Request<{},{},Ipost>, res: Response, next:
 };
 //get all Categories
 
-export const getAllPost = async (req: Request, res: Response, next: NextFunction): Promise<any> => {
+export const getMyPosts = async (req: Request, res: Response, next: NextFunction): Promise<any> => {
     try {
-        const userId = new mongoose.Types.ObjectId(req.userId as string); 
+        const userId = new mongoose.Types.ObjectId(req.userId as string);
         const id = req.params.id;
-        if(id){
-        const post = await PostModel.findById(id).lean();
-        if (!post) {
-            return ERROR(res, 404, "post not found", {});
-        }
-        const haveILiked = post.likeCount.some(
-            likeId => likeId.toString() === userId.toString() 
-        );
-        const likeCount = post.likeCount.length;
-        return SUCCESS(res, 200, "Get Post successfully", {
-            posts:{ ...post, haveILiked, likeCount}})
+        if (id) {
+            const post = await PostModel.findById(id).lean();
+            if (!post) {
+                return ERROR(res, 404, "post not found", {});
+            }
+            const haveILiked = post.likeCount.some(
+                likeId => likeId.toString() === userId.toString()
+            );
+            const likeCount = post.likeCount.length;
+            return SUCCESS(res, 200, "Get Post successfully", {
+                posts: { ...post, haveILiked, likeCount }
+            })
 
-    }
-        const page = parseInt(req.query.page as string) || 1; 
-        const hashTag = req.query.page as string; 
-        const limit = parseInt(req.query.limit as string) || 10; 
+        }
+        const page = parseInt(req.query.page as string) || 1;
+        const hashTag = req.query.page as string;
+        const limit = parseInt(req.query.limit as string) || 10;
         const skip = (page - 1) * limit;
 
         const qry: FilterQuery<typeof PostModel> = {
@@ -51,22 +52,84 @@ export const getAllPost = async (req: Request, res: Response, next: NextFunction
         };
 
         if (hashTag) {
-            qry.desc = { $regex: `#${hashTag}`, $options: "i" }; 
+            qry.desc = { $regex: `#${hashTag}`, $options: "i" };
         }
         const posts = await PostModel.find(qry)
-            .sort({ createdAt: -1 }) 
-            .skip(skip) 
-            .limit(limit) 
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit)
             .lean();
 
         const totalPosts = await PostModel.countDocuments({ userId });
+        const updatedPosts = posts.map(post => {
+            const likeCount = post.likeCount.length; // Total likes
+            const haveILiked = post.likeCount.some(
+                likeId => likeId.toString() === userId.toString() // Compare ObjectId as strings
+            );
+            return {
+                ...post,
+                likeCount,
+                haveILiked,
+            };
+        });
+        return SUCCESS(res, 200, "Get all Post successfully", {
+            posts: updatedPosts,
+            pagination: {
+                totalPosts,
+                currentPage: page,
+                totalPages: Math.ceil(totalPosts / limit),
+                limit,
+            },
+        });
+    } catch (error: any) {
+        console.error(error);
+        return ERROR(res, 500, error?.message, error);
+    }
+}
+
+export const getAllPost = async (req: Request, res: Response, next: NextFunction): Promise<any> => {
+    try {
+        const userId = new mongoose.Types.ObjectId(req.userId as string);
+        const id = req.params.id;
+        if (id) {
+            const post = await PostModel.findById(id).lean();
+            if (!post) {
+                return ERROR(res, 404, "post not found", {});
+            }
+            const haveILiked = post.likeCount.some(
+                likeId => likeId.toString() === userId.toString()
+            );
+            const likeCount = post.likeCount.length;
+            return SUCCESS(res, 200, "Get Post successfully", {
+                posts: { ...post, haveILiked, likeCount }
+            })
+
+        }
+        const page = parseInt(req.query.page as string) || 1;
+        const hashTag = req.query.page as string;
+        const limit = parseInt(req.query.limit as string) || 10;
+        const skip = (page - 1) * limit;
+
+        const qry: FilterQuery<typeof PostModel> = {
+        };
+
+        if (hashTag) {
+            qry.desc = { $regex: `#${hashTag}`, $options: "i" };
+        }
+        const posts = await PostModel.find(qry)
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit)
+            .lean();
+
+        const totalPosts = await PostModel.countDocuments();
 
 
         const updatedPosts = posts.map(post => {
             const likeCount = post.likeCount.length; // Total likes
             const haveILiked = post.likeCount.some(
                 likeId => likeId.toString() === userId.toString() // Compare ObjectId as strings
-            );    
+            );
             return {
                 ...post,
                 likeCount,
@@ -91,9 +154,9 @@ export const getAllPost = async (req: Request, res: Response, next: NextFunction
 };
 
 //edit
-export const editPost = async (req: Request<IeditPostParamsType,{},Ieditpost>, res: Response, next: NextFunction): Promise<any> => {
+export const editPost = async (req: Request<IeditPostParamsType, {}, Ieditpost>, res: Response, next: NextFunction): Promise<any> => {
     try {
-        let { desc ,images} = req.body;
+        let { desc, images } = req.body;
         const id = req.params.id;
         const post = await PostModel.findById(id)
         if (!post) {
@@ -121,7 +184,7 @@ export const deletePost = async (req: Request, res: Response, next: NextFunction
         if (!post) {
             return ERROR(res, 404, "Post not found", {});
         }
-        return SUCCESS(res, 200, "Delete successfully",{});
+        return SUCCESS(res, 200, "Delete successfully", {});
     } catch (error: any) {
         console.log(error)
         return ERROR(res, 500, error?.message, error);
@@ -130,25 +193,25 @@ export const deletePost = async (req: Request, res: Response, next: NextFunction
 
 //like dislike post
 export const likeDisLikePost = async (req: Request, res: Response, next: NextFunction):
-Promise<any> => {
+    Promise<any> => {
     try {
         const id = req.params.id as string;
         const userId = req.userId as ObjectId;
         const post = await PostModel.findById(id);
         if (!post) {
             return ERROR(res, 404, "Post not found", {});
-            }
-            const userLiked = post.likeCount.find((like) => like.toString() === userId.toString());
-            if(userLiked){
-                post.likeCount = post.likeCount.filter((like) => like.toString() !== userId.toString());
-            }
-            else{
-                post.likeCount.push(userId);
-            }
-            await post.save();
-            return SUCCESS(res, 200, `${userLiked?"Dislike":"Like"} post successfully`, {});
-        }catch (error: any) {
-            console.log(error)
-            return ERROR(res, 500, error?.message, error);
         }
-    };
+        const userLiked = post.likeCount.find((like) => like.toString() === userId.toString());
+        if (userLiked) {
+            post.likeCount = post.likeCount.filter((like) => like.toString() !== userId.toString());
+        }
+        else {
+            post.likeCount.push(userId);
+        }
+        await post.save();
+        return SUCCESS(res, 200, `${userLiked ? "Dislike" : "Like"} post successfully`, {});
+    } catch (error: any) {
+        console.log(error)
+        return ERROR(res, 500, error?.message, error);
+    }
+};
