@@ -29,7 +29,7 @@ export const getMyPosts = async (req: Request, res: Response, next: NextFunction
         const userId = new mongoose.Types.ObjectId(req.userId as string);
         const id = req.params.id;
         if (id) {
-            const post = await PostModel.findById(id).lean();
+            const post = await PostModel.findById(id).lean().populate("userId", "fullName profileImage email coverImage boi");
             if (!post) {
                 return ERROR(res, 404, "post not found", {});
             }
@@ -58,7 +58,7 @@ export const getMyPosts = async (req: Request, res: Response, next: NextFunction
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limit)
-            .lean();
+            .lean().populate("userId", "fullName profileImage email coverImage boi");
 
         const totalPosts = await PostModel.countDocuments({ userId });
         const updatedPosts = posts.map(post => {
@@ -92,7 +92,7 @@ export const getAllPost = async (req: Request, res: Response, next: NextFunction
         const userId = new mongoose.Types.ObjectId(req.userId as string);
         const id = req.params.id;
         if (id) {
-            const post = await PostModel.findById(id).lean();
+            const post = await PostModel.findById(id).lean().populate("userId", "fullName profileImage email coverImage boi");
             if (!post) {
                 return ERROR(res, 404, "post not found", {});
             }
@@ -120,7 +120,7 @@ export const getAllPost = async (req: Request, res: Response, next: NextFunction
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limit)
-            .lean();
+            .lean().populate("userId", "fullName profileImage email coverImage boi");
 
         const totalPosts = await PostModel.countDocuments();
 
